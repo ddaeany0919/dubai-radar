@@ -8,7 +8,7 @@ import { Heart, MapPin, AlertCircle, Check } from 'lucide-react';
 
 export default function StoreList() {
     const [stores, setStores] = useState<any[]>([]);
-    const { favorites, toggleFavorite, setSelectedStore, setViewMode, userLocation, setUserLocation } = useStore();
+    const { favorites, toggleFavorite, setSelectedStore, setViewMode, userLocation, setUserLocation, setBottomSheetOpen } = useStore();
     const [sortBy, setSortBy] = useState<'distance' | 'price'>('distance');
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
@@ -21,7 +21,8 @@ export default function StoreList() {
       *,
       products (
         status,
-        price
+        price,
+        stock_count
       )
     `);
         if (data) setStores(data);
@@ -136,7 +137,8 @@ export default function StoreList() {
                                     className="flex-1 cursor-pointer"
                                     onClick={() => {
                                         setSelectedStore(store);
-                                        setViewMode('map'); // Go to map when clicked
+                                        setViewMode('map');
+                                        setBottomSheetOpen(true); // Auto-open bottom sheet
                                     }}
                                 >
                                     <div className="flex items-center gap-2">
@@ -151,13 +153,18 @@ export default function StoreList() {
                                     </div>
                                     <p className="text-sm text-gray-500 mt-1">{store.address || '주소 정보 없음'}</p>
 
-                                    <div className="mt-3 flex items-center gap-2">
+                                    <div className="mt-3 flex items-center gap-2 flex-wrap">
                                         <span className={`px-2 py-1 rounded-md text-xs font-bold ${status === 'AVAILABLE' ? 'bg-green-100 text-green-700' :
                                             status === 'SOLD_OUT' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                                             }`}>
                                             {status === 'AVAILABLE' ? '재고 있음' :
                                                 status === 'SOLD_OUT' ? '품절' : '정보 없음'}
                                         </span>
+                                        {status === 'AVAILABLE' && store.products?.[0]?.stock_count > 0 && (
+                                            <span className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-full shadow-md">
+                                                🍪 {store.products[0].stock_count}개 남음
+                                            </span>
+                                        )}
                                         {store.products?.[0]?.price > 0 && (
                                             <span className="text-sm font-bold text-gray-900">
                                                 {store.products[0].price.toLocaleString()}원

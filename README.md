@@ -41,7 +41,34 @@
 
 ### 🗄️ 데이터베이스 (Supabase)
 - **Products Table**: `store_id`, `status` ('AVAILABLE', 'SOLD_OUT'), `stock_count`, `owner_id`, `last_check_time`.
+- **Store Posts Table**: `store_id`, `owner_id`, `content`, `photos` (array), `created_at` - 사장님 소식/사진 포스팅.
+- **Storage**: Supabase Storage를 이용한 사진 업로드 (`store-photos` bucket).
 - **로직**: 재고 업데이트 시, 해당 가게의 레코드가 없으면 `INSERT`, 있으면 `UPDATE` (Upsert 로직 적용).
+
+### 📸 사장님 포스트 기능 (Owner Posts)
+- **구현 파일**: `src/components/OwnerPostEditor.tsx`, `src/components/StorePostsGallery.tsx`
+- **내용**:
+    - **포스트 작성**: 사장님이 텍스트와 사진(최대 5장)을 업로드하여 소식 전달.
+    - **사진 갤러리**: 가로 스크롤 방식의 작은 썸네일(48x48px)로 여러 장 표시.
+    - **최신 포스트만 유지**: 새 포스트 작성 시 이전 포스트 자동 삭제 (1개만 유지).
+    - **실시간 업데이트**: 포스트 등록 시 갤러리가 즉시 새로고침.
+    - **개발 모드**: 인증 없이도 테스트 가능한 Dev Mode 지원.
+
+### 🎯 향상된 UI/UX
+- **구현 파일**: `src/components/StoreList.tsx`, `src/components/StoreBottomSheet.tsx`, `src/components/RawNaverMap.tsx`
+- **내용**:
+    - **재고 개수 뱃지**:
+        - 목록: 초록색 그라데이션 뱃지 "🍪 120개 남음"
+        - 지도: 마커 오른쪽 상단(1-2시 방향)에 큰 숫자 뱃지
+    - **네이버 플레이스 링크**: 가게 정보에서 바로 네이버 지도로 이동 가능한 버튼.
+    - **목록 클릭 → 지도 이동**: 목록에서 가게 클릭 시 지도로 전환하며 해당 위치로 이동 + 팝업 자동 열림.
+    - **모달 스타일**: 회색 블러 배경, 가운데 정렬 방식으로 변경.
+    - **재고별 마커 이미지** (준비됨):
+        - 재고 50개 이상: `cookie-marker-happy.png` (행복)
+        - 재고 20-49개: `cookie-marker-normal.png` (평범)
+        - 재고 1-19개: `cookie-marker-worried.png` (걱정)
+        - 품절/0개: `cookie-marker-sad.png` (슬픔)
+
 
 ---
 

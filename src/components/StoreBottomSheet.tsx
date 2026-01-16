@@ -55,7 +55,7 @@ export default function StoreBottomSheet() {
             .from('products')
             .select('*')
             .eq('store_id', selectedStore.id)
-            .single();
+            .maybeSingle();
 
         if (data) {
             setProduct(data);
@@ -164,9 +164,18 @@ export default function StoreBottomSheet() {
                 ) : (
                     <>
                         <div className="flex justify-between items-start mb-4">
-                            <div>
+                            <div className="flex-1">
                                 <h2 className="text-xl font-bold text-gray-900">{selectedStore.name}</h2>
                                 <p className="text-sm text-gray-500 mt-1">{selectedStore.address || '주소 정보 없음'}</p>
+                                <a
+                                    href={`https://map.naver.com/p/search/${encodeURIComponent(selectedStore.name + ' ' + (selectedStore.address || ''))}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-full hover:bg-green-600 transition-colors"
+                                >
+                                    <span>N</span>
+                                    <span>네이버 플레이스</span>
+                                </a>
                             </div>
                             <div className="flex gap-2">
                                 <button
