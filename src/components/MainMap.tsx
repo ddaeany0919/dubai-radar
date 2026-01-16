@@ -10,7 +10,7 @@ import StoreBottomSheet from '@/components/StoreBottomSheet';
 function MapContent() {
     const navermaps = useNavermaps();
     const [stores, setStores] = useState<any[]>([]);
-    const { setSelectedStore } = useStore();
+    const { setSelectedStore, setBottomSheetOpen } = useStore();
 
     useEffect(() => {
         fetchStores();
@@ -50,12 +50,21 @@ function MapContent() {
             className="w-full h-full"
         >
             {stores.map((store) => {
-                const status = store.products?.[0]?.status || 'UNKNOWN';
                 return (
                     <Marker
                         key={store.id}
                         position={new navermaps.LatLng(store.lat, store.lng)}
-                        onClick={() => setSelectedStore(store)}
+                        onClick={() => {
+                            setBottomSheetOpen(true);
+                            setSelectedStore(store);
+                        }}
+                        icon={{
+                            url: '/cookie-marker.png',
+                            size: new navermaps.Size(64, 64),
+                            scaledSize: new navermaps.Size(64, 64),
+                            origin: new navermaps.Point(0, 0),
+                            anchor: new navermaps.Point(32, 32)
+                        }}
                     />
                 );
             })}
@@ -64,8 +73,7 @@ function MapContent() {
 }
 
 export default function MainMap() {
-    const clientId = '9me1g8fgsx'; // Hardcoded for debugging
-    console.log("MainMap using Client ID:", clientId);
+    const clientId = '9me1g8fgsx';
 
     return (
         <NavermapsProvider

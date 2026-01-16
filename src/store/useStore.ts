@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -12,38 +11,50 @@ interface Store {
 }
 
 interface StoreState {
-    selectedStore: Store | null;
-    setSelectedStore: (store: Store | null) => void;
+    selectedStore: any | null;
     isBottomSheetOpen: boolean;
-    setBottomSheetOpen: (isOpen: boolean) => void;
-    favorites: number[]; // Store IDs
-    toggleFavorite: (storeId: number) => void;
+    favorites: number[];
+    notifications: number[]; // Store IDs for notifications
     viewMode: 'map' | 'list';
+    userLocation: { lat: number; lng: number } | null;
+    setSelectedStore: (store: any | null) => void;
+    setBottomSheetOpen: (isOpen: boolean) => void;
+    toggleFavorite: (storeId: number) => void;
+    toggleNotification: (storeId: number) => void;
     setViewMode: (mode: 'map' | 'list') => void;
+    setUserLocation: (location: { lat: number; lng: number } | null) => void;
 }
 
 export const useStore = create<StoreState>()(
     persist(
         (set) => ({
             selectedStore: null,
-            setSelectedStore: (store) => set({ selectedStore: store, isBottomSheetOpen: !!store }),
             isBottomSheetOpen: false,
-            setBottomSheetOpen: (isOpen) => set({ isBottomSheetOpen: isOpen }),
             favorites: [],
-            toggleFavorite: (storeId) => set((state) => {
-                const isFav = state.favorites.includes(storeId);
-                return {
-                    favorites: isFav
-                        ? state.favorites.filter(id => id !== storeId)
-                        : [...state.favorites, storeId]
-                };
-            }),
+            notifications: [],
             viewMode: 'map',
+            userLocation: null,
+            setSelectedStore: (store) => set({ selectedStore: store }),
+            setBottomSheetOpen: (isOpen) => set({ isBottomSheetOpen: isOpen }),
+            toggleFavorite: (storeId) => set((state) => ({
+                favorites: state.favorites.includes(storeId)
+                    ? state.favorites.filter((id) => id !== storeId)
+                    : [...state.favorites, storeId]
+            })),
+            toggleNotification: (storeId) => set((state) => ({
+                notifications: state.notifications.includes(storeId)
+                    ? state.notifications.filter((id) => id !== storeId)
+                    : [...state.notifications, storeId]
+            })),
             setViewMode: (mode) => set({ viewMode: mode }),
+            setUserLocation: (location) => set({ userLocation: location }),
         }),
         {
-            name: 'dubai-radar-storage',
-            partialize: (state) => ({ favorites: state.favorites }), // Only persist favorites
+            name: 'store-storage',
+            partialize: (state) => ({
+                favorites: state.favorites,
+                notifications: state.notifications
+            }),
         }
     )
 );

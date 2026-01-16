@@ -6,9 +6,15 @@ import Script from 'next/script';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 
+declare global {
+    interface Window {
+        naver: any;
+    }
+}
+
 export default function RawNaverMap() {
     const mapRef = useRef<HTMLDivElement>(null);
-    const { setSelectedStore } = useStore();
+    const { setSelectedStore, setBottomSheetOpen } = useStore();
     const mapInstance = useRef<any>(null);
 
     const initMap = () => {
@@ -39,12 +45,20 @@ export default function RawNaverMap() {
             storesData.forEach((store: any) => {
                 const marker = new window.naver.maps.Marker({
                     position: new window.naver.maps.LatLng(store.lat, store.lng),
-                    map: map
+                    map: map,
+                    icon: {
+                        url: '/cookie-marker-transparent-final.png',
+                        size: new window.naver.maps.Size(64, 64),
+                        scaledSize: new window.naver.maps.Size(64, 64),
+                        origin: new window.naver.maps.Point(0, 0),
+                        anchor: new window.naver.maps.Point(32, 32)
+                    }
                 });
 
                 window.naver.maps.Event.addListener(marker, 'click', () => {
-                    console.log("Marker clicked:", store.name);
+                    console.log("Marker clicked! Opening bottom sheet for:", store.name);
                     setSelectedStore(store);
+                    setBottomSheetOpen(true);
                 });
             });
         }

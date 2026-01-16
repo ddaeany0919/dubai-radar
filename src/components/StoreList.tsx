@@ -8,8 +8,9 @@ import { Heart, MapPin, AlertCircle, Check } from 'lucide-react';
 
 export default function StoreList() {
     const [stores, setStores] = useState<any[]>([]);
-    const { favorites, toggleFavorite, setSelectedStore, setViewMode } = useStore();
+    const { favorites, toggleFavorite, setSelectedStore, setViewMode, userLocation, setUserLocation } = useStore();
     const [sortBy, setSortBy] = useState<'distance' | 'price'>('distance');
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
     useEffect(() => {
         fetchStores();
@@ -26,13 +27,53 @@ export default function StoreList() {
         if (data) setStores(data);
     };
 
+    const requestLocation = () => {
+        setIsLoadingLocation(true);
+        if (!navigator.geolocation) {
+            alert('GPS를 지원하지 않는 브라우저입니다.');
+            setIsLoadingLocation(false);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+                setIsLoadingLocation(false);
+            },
+            (error) => {
+                console.error(error);
+                alert('위치 정보를 가져올 수 없습니다. 권한을 확인해주세요.');
+                setIsLoadingLocation(false);
+            }
+        );
+    };
+
+    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        const R = 6371; // Earth radius in km
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLng = (lng2 - lng1) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Distance in km
+    };
+
     const sortedStores = [...stores].sort((a, b) => {
         if (sortBy === 'price') {
             const priceA = a.products?.[0]?.price || 999999;
             const priceB = b.products?.[0]?.price || 999999;
             return priceA - priceB;
         }
-        // Distance sort would require user location, for now just ID or Name
+        if (sortBy === 'distance' && userLocation) {
+            const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng);
+            const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+            return distA - distB;
+        }
         return a.id - b.id;
     });
 
@@ -52,17 +93,21 @@ export default function StoreList() {
             </div>
 
             {/* Filters */}
-            <div className="px-4 mb-4 flex gap-2">
+            <div className="px-4 mb-4 flex gap-2 overflow-x-auto">
                 <button
-                    onClick={() => setSortBy('distance')}
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${sortBy === 'distance' ? 'bg-black text-white' : 'bg-white text-gray-600 border'
+                    onClick={() => {
+                        setSortBy('distance');
+                        if (!userLocation) requestLocation();
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-1 ${sortBy === 'distance' ? 'bg-black text-white' : 'bg-white text-gray-600 border'
                         }`}
                 >
-                    거리순
+                    <MapPin className="w-4 h-4" />
+                    {userLocation ? '거리순' : '내 주변 찾기'}
                 </button>
                 <button
                     onClick={() => setSortBy('price')}
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${sortBy === 'price' ? 'bg-black text-white' : 'bg-white text-gray-600 border'
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors whitespace-nowrap ${sortBy === 'price' ? 'bg-black text-white' : 'bg-white text-gray-600 border'
                         }`}
                 >
                     가격순
@@ -71,9 +116,18 @@ export default function StoreList() {
 
             {/* List */}
             <div className="px-4 space-y-3">
+                {isLoadingLocation && (
+                    <div className="text-center py-4 text-gray-500">
+                        📍 위치 정보를 가져오는 중입니다...
+                    </div>
+                )}
+
                 {sortedStores.map((store) => {
                     const status = store.products?.[0]?.status || 'UNKNOWN';
                     const isFav = favorites.includes(store.id);
+                    const distance = userLocation
+                        ? calculateDistance(userLocation.lat, userLocation.lng, store.lat, store.lng)
+                        : null;
 
                     return (
                         <div key={store.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -85,12 +139,21 @@ export default function StoreList() {
                                         setViewMode('map'); // Go to map when clicked
                                     }}
                                 >
-                                    <h3 className="font-bold text-lg text-gray-900">{store.name}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-lg text-gray-900">{store.name}</h3>
+                                        {distance !== null && (
+                                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                                {distance < 1
+                                                    ? `${Math.round(distance * 1000)}m`
+                                                    : `${distance.toFixed(1)}km`}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-gray-500 mt-1">{store.address || '주소 정보 없음'}</p>
 
                                     <div className="mt-3 flex items-center gap-2">
                                         <span className={`px-2 py-1 rounded-md text-xs font-bold ${status === 'AVAILABLE' ? 'bg-green-100 text-green-700' :
-                                                status === 'SOLD_OUT' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                                            status === 'SOLD_OUT' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                                             }`}>
                                             {status === 'AVAILABLE' ? '재고 있음' :
                                                 status === 'SOLD_OUT' ? '품절' : '정보 없음'}

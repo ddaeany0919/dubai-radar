@@ -10,6 +10,8 @@ export const metadata: Metadata = {
     description: "Find Dubai Chocolate near you",
 };
 
+import NotificationManager from "@/components/NotificationManager";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -18,6 +20,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
+                <NotificationManager />
                 {children}
             </body>
         </html>
