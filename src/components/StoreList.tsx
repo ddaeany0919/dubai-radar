@@ -160,11 +160,12 @@ export default function StoreList() {
                                             {status === 'AVAILABLE' ? '재고 있음' :
                                                 status === 'SOLD_OUT' ? '품절' : '정보 없음'}
                                         </span>
-                                        {status === 'AVAILABLE' && store.products?.[0]?.stock_count > 0 && (
-                                            <span className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-full shadow-md">
-                                                🍪 {store.products[0].stock_count}개 남음
-                                            </span>
-                                        )}
+                                        <span className={`px-3 py-1.5 text-white text-sm font-bold rounded-full shadow-md bg-gradient-to-r ${(store.products?.[0]?.stock_count || 0) > 0
+                                                ? 'from-green-500 to-green-600'
+                                                : 'from-gray-400 to-gray-500'
+                                            }`}>
+                                            🍪 {store.products?.[0]?.stock_count || 0}개 남음
+                                        </span>
                                         {store.products?.[0]?.price > 0 && (
                                             <span className="text-sm font-bold text-gray-900">
                                                 {store.products[0].price.toLocaleString()}원

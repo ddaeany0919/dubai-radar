@@ -8,8 +8,24 @@ import OwnerPostEditor from './OwnerPostEditor';
 import StorePostsGallery from './StorePostsGallery';
 
 export default function StoreBottomSheet() {
-    const { selectedStore, isBottomSheetOpen, setBottomSheetOpen, favorites, toggleFavorite, notifications, toggleNotification } = useStore();
-    const closeBottomSheet = () => setBottomSheetOpen(false);
+    const {
+        selectedStore,
+        selectedStores,
+        setSelectedStore,
+        setSelectedStores,
+        isBottomSheetOpen,
+        setBottomSheetOpen,
+        favorites,
+        toggleFavorite,
+        notifications,
+        toggleNotification
+    } = useStore();
+
+    const closeBottomSheet = () => {
+        setBottomSheetOpen(false);
+        setSelectedStores(null);
+    };
+
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -144,7 +160,7 @@ export default function StoreBottomSheet() {
         fetchProductStatus();
     };
 
-    if (!mounted || !isBottomSheetOpen || !selectedStore) return null;
+    if (!mounted || !isBottomSheetOpen || (!selectedStore && !selectedStores)) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[99999] flex items-center justify-center">
@@ -155,166 +171,222 @@ export default function StoreBottomSheet() {
 
             <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
 
-                {showOnboarding ? (
-                    <OwnerOnboarding
-                        storeId={selectedStore.id}
-                        storeName={selectedStore.name}
-                        onSuccess={handleOnboardingSuccess}
-                    />
-                ) : (
+                {/* Multiple Stores List View */}
+                {selectedStores && !selectedStore && (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">이 구역의 카페 목록</h2>
+                                <p className="text-sm text-gray-500 mt-1">총 {selectedStores.length}개의 가게가 있습니다.</p>
+                            </div>
+                            <button onClick={closeBottomSheet} className="p-2 hover:bg-gray-100 rounded-full">
+                                <X className="w-6 h-6 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {selectedStores.map((store) => {
+                                const stock = store.products?.[0]?.stock_count || 0;
+                                return (
+                                    <div
+                                        key={store.id}
+                                        onClick={() => setSelectedStore(store)}
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-green-500 hover:bg-green-50 cursor-pointer transition-all group"
+                                    >
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-900 group-hover:text-green-700">{store.name}</h3>
+                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{store.address}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-4">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-black ${stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                {stock}개
+                                            </span>
+                                            <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-500">
+                                                <Check className="w-4 h-4" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Single Store Detail View */}
+                {selectedStore && (
                     <>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1">
-                                <h2 className="text-xl font-bold text-gray-900">{selectedStore.name}</h2>
-                                <p className="text-sm text-gray-500 mt-1">{selectedStore.address || '주소 정보 없음'}</p>
-                                <a
-                                    href={`https://map.naver.com/p/search/${encodeURIComponent(selectedStore.name + ' ' + (selectedStore.address || ''))}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-full hover:bg-green-600 transition-colors"
-                                >
-                                    <span>N</span>
-                                    <span>네이버 플레이스</span>
-                                </a>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={async () => {
-                                        if (Notification.permission !== 'granted') {
-                                            const permission = await Notification.requestPermission();
-                                            if (permission !== 'granted') return;
-                                        }
-                                        toggleNotification(selectedStore.id);
-                                    }}
-                                    className="p-2 hover:bg-gray-100 rounded-full"
-                                >
-                                    <Bell
-                                        className={`w-6 h-6 transition-colors ${notifications.includes(selectedStore.id) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'
-                                            }`}
-                                    />
-                                </button>
-                                <button
-                                    onClick={() => toggleFavorite(selectedStore.id)}
-                                    className="p-2 hover:bg-gray-100 rounded-full"
-                                >
-                                    <Heart
-                                        className={`w-6 h-6 transition-colors ${favorites.includes(selectedStore.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'
-                                            }`}
-                                    />
-                                </button>
-                                <button onClick={closeBottomSheet} className="p-2 hover:bg-gray-100 rounded-full">
-                                    <X className="w-6 h-6 text-gray-500" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                                <span className="text-gray-600">현재 상태</span>
-                                <span className={`font-bold ${product?.status === 'AVAILABLE' ? 'text-green-600' :
-                                    product?.status === 'SOLD_OUT' ? 'text-red-600' : 'text-gray-400'
-                                    }`}>
-                                    {product?.status === 'AVAILABLE' ? '재고 있음' :
-                                        product?.status === 'SOLD_OUT' ? '품절' : '정보 없음'}
-                                </span>
-                            </div>
-                            {product?.status === 'AVAILABLE' && product?.stock_count > 0 && (
-                                <p className="text-sm text-green-600 font-semibold mt-2">
-                                    현재 {product.stock_count}개 남음
-                                </p>
-                            )}
-                            <p className="text-xs text-gray-400 mt-2 text-right">
-                                마지막 업데이트: {product?.last_check_time ? new Date(product.last_check_time).toLocaleString() : '-'}
-                            </p>
-                        </div>
-
-                        {isOwner ? (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-bold text-gray-700">재고 수량:</span>
-                                    <input
-                                        type="number"
-                                        value={stockCount}
-                                        onChange={(e) => setStockCount(Number(e.target.value))}
-                                        className="px-3 py-2 border rounded-lg w-20 font-bold"
-                                    />
-                                    <span className="text-sm text-gray-600">개</span>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => handleUpdateStock('AVAILABLE', stockCount)}
-                                        disabled={loading}
-                                        className="flex flex-col items-center justify-center p-4 bg-green-50 border-2 border-green-500 rounded-xl hover:bg-green-100 active:scale-95 transition-all"
-                                    >
-                                        <Check className="w-8 h-8 text-green-600 mb-2" />
-                                        <span className="font-bold text-green-700">입고 처리</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleUpdateStock('SOLD_OUT', 0)}
-                                        disabled={loading}
-                                        className="flex flex-col items-center justify-center p-4 bg-red-50 border-2 border-red-500 rounded-xl hover:bg-red-100 active:scale-95 transition-all"
-                                    >
-                                        <AlertCircle className="w-8 h-8 text-red-600 mb-2" />
-                                        <span className="font-bold text-red-700">품절 처리</span>
-                                    </button>
-                                </div>
-
-                                <OwnerPostEditor
-                                    storeId={selectedStore.id}
-                                    onPostCreated={() => {
-                                        fetchProductStatus();
-                                        setGalleryRefreshKey(prev => prev + 1);
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => handleUpdateStock('AVAILABLE')}
-                                    disabled={loading}
-                                    className="flex flex-col items-center justify-center p-4 bg-green-50 border-2 border-green-500 rounded-xl hover:bg-green-100 active:scale-95 transition-all"
-                                >
-                                    <Check className="w-8 h-8 text-green-600 mb-2" />
-                                    <span className="font-bold text-green-700">재고 있어요</span>
-                                </button>
-                                <button
-                                    onClick={() => handleUpdateStock('SOLD_OUT')}
-                                    disabled={loading}
-                                    className="flex flex-col items-center justify-center p-4 bg-red-50 border-2 border-red-500 rounded-xl hover:bg-red-100 active:scale-95 transition-all"
-                                >
-                                    <AlertCircle className="w-8 h-8 text-red-600 mb-2" />
-                                    <span className="font-bold text-red-700">품절이에요</span>
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="mt-6">
-                            <StorePostsGallery
-                                key={galleryRefreshKey}
+                        {showOnboarding ? (
+                            <OwnerOnboarding
                                 storeId={selectedStore.id}
-                                stockCount={product?.stock_count}
+                                storeName={selectedStore.name}
+                                onSuccess={handleOnboardingSuccess}
                             />
-                        </div>
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            {selectedStores && (
+                                                <button
+                                                    onClick={() => setSelectedStore(null)}
+                                                    className="text-xs text-green-600 font-bold hover:underline mb-1"
+                                                >
+                                                    ← 목록으로
+                                                </button>
+                                            )}
+                                        </div>
+                                        <h2 className="text-xl font-bold text-gray-900">{selectedStore.name}</h2>
+                                        <p className="text-sm text-gray-500 mt-1">{selectedStore.address || '주소 정보 없음'}</p>
+                                        <a
+                                            href={`https://map.naver.com/p/search/${encodeURIComponent(selectedStore.name + ' ' + (selectedStore.address || ''))}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-full hover:bg-green-600 transition-colors"
+                                        >
+                                            <span>N</span>
+                                            <span>네이버 플레이스</span>
+                                        </a>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={async () => {
+                                                if (Notification.permission !== 'granted') {
+                                                    const permission = await Notification.requestPermission();
+                                                    if (permission !== 'granted') return;
+                                                }
+                                                toggleNotification(selectedStore.id);
+                                            }}
+                                            className="p-2 hover:bg-gray-100 rounded-full"
+                                        >
+                                            <Bell
+                                                className={`w-6 h-6 transition-colors ${notifications.includes(selectedStore.id) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'
+                                                    }`}
+                                            />
+                                        </button>
+                                        <button
+                                            onClick={() => toggleFavorite(selectedStore.id)}
+                                            className="p-2 hover:bg-gray-100 rounded-full"
+                                        >
+                                            <Heart
+                                                className={`w-6 h-6 transition-colors ${favorites.includes(selectedStore.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                                                    }`}
+                                            />
+                                        </button>
+                                        <button onClick={closeBottomSheet} className="p-2 hover:bg-gray-100 rounded-full">
+                                            <X className="w-6 h-6 text-gray-500" />
+                                        </button>
+                                    </div>
+                                </div>
 
-                        {!isOwner && (
-                            <div className="mt-6 pt-4 border-t border-gray-200 space-y-2">
-                                <button
-                                    onClick={handleOwnerClick}
-                                    className="w-full py-3 text-sm text-gray-500 hover:text-gray-700 font-medium"
-                                >
-                                    사장님이신가요? 재고 관리하기
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setIsOwner(true);
-                                        alert('🕵️ 개발자 모드: 강제로 사장님 권한을 획득했습니다.');
-                                    }}
-                                    className="text-xs text-gray-300 hover:text-gray-400 w-full"
-                                >
-                                    (Dev Mode)
-                                </button>
-                            </div>
+                                <div className="mb-6">
+                                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">상품 상태</span>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${product?.status === 'AVAILABLE' ? 'bg-green-100 text-green-700' :
+                                                product?.status === 'SOLD_OUT' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                {product?.status === 'AVAILABLE' ? '재고 있음' :
+                                                    product?.status === 'SOLD_OUT' ? '품절' : '정보 없음'}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-end justify-between">
+                                            <div>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className={`text-4xl font-black ${(product?.stock_count || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {product?.stock_count || 0}
+                                                    </span>
+                                                    <span className={`text-lg font-bold ${(product?.stock_count || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        개 남음
+                                                    </span>
+                                                </div>
+                                                {product?.price > 0 && (
+                                                    <p className="text-lg font-bold text-gray-900 mt-1">
+                                                        {product.price.toLocaleString()}원
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] text-gray-400 uppercase tracking-tighter">마지막 업데이트</p>
+                                                <p className="text-xs font-medium text-gray-500">
+                                                    {product?.last_check_time ? new Date(product.last_check_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {isOwner && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-gray-700">재고 수량:</span>
+                                            <input
+                                                type="number"
+                                                value={stockCount}
+                                                onChange={(e) => setStockCount(Number(e.target.value))}
+                                                className="px-3 py-2 border rounded-lg w-20 font-bold"
+                                            />
+                                            <span className="text-sm text-gray-600">개</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => handleUpdateStock('AVAILABLE', stockCount)}
+                                                disabled={loading}
+                                                className="flex flex-col items-center justify-center p-4 bg-green-50 border-2 border-green-500 rounded-xl hover:bg-green-100 active:scale-95 transition-all"
+                                            >
+                                                <Check className="w-8 h-8 text-green-600 mb-2" />
+                                                <span className="font-bold text-green-700">입고 처리</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateStock('SOLD_OUT', 0)}
+                                                disabled={loading}
+                                                className="flex flex-col items-center justify-center p-4 bg-red-50 border-2 border-red-500 rounded-xl hover:bg-red-100 active:scale-95 transition-all"
+                                            >
+                                                <AlertCircle className="w-8 h-8 text-red-600 mb-2" />
+                                                <span className="font-bold text-red-700">품절 처리</span>
+                                            </button>
+                                        </div>
+
+                                        <OwnerPostEditor
+                                            storeId={selectedStore.id}
+                                            onPostCreated={() => {
+                                                fetchProductStatus();
+                                                setGalleryRefreshKey(prev => prev + 1);
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="mt-6">
+                                    <StorePostsGallery
+                                        key={galleryRefreshKey}
+                                        storeId={selectedStore.id}
+                                        stockCount={product?.stock_count}
+                                    />
+                                </div>
+
+                                {!isOwner && (
+                                    <div className="mt-6 pt-4 border-t border-gray-200 space-y-2">
+                                        <button
+                                            onClick={handleOwnerClick}
+                                            className="w-full py-3 text-sm text-gray-500 hover:text-gray-700 font-medium"
+                                        >
+                                            사장님이신가요? 재고 관리하기
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsOwner(true);
+                                                alert('🕵️ 개발자 모드: 강제로 사장님 권한을 획득했습니다.');
+                                            }}
+                                            className="text-xs text-gray-300 hover:text-gray-400 w-full"
+                                        >
+                                            (Dev Mode)
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </>
                 )}

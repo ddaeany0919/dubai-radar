@@ -12,12 +12,14 @@ interface Store {
 
 interface StoreState {
     selectedStore: any | null;
+    selectedStores: any[] | null;
     isBottomSheetOpen: boolean;
     favorites: number[];
     notifications: number[]; // Store IDs for notifications
     viewMode: 'map' | 'list';
     userLocation: { lat: number; lng: number } | null;
     setSelectedStore: (store: any | null) => void;
+    setSelectedStores: (stores: any[] | null) => void;
     setBottomSheetOpen: (isOpen: boolean) => void;
     toggleFavorite: (storeId: number) => void;
     toggleNotification: (storeId: number) => void;
@@ -29,12 +31,14 @@ export const useStore = create<StoreState>()(
     persist(
         (set) => ({
             selectedStore: null,
+            selectedStores: null,
             isBottomSheetOpen: false,
             favorites: [],
             notifications: [],
             viewMode: 'map',
             userLocation: null,
-            setSelectedStore: (store) => set({ selectedStore: store }),
+            setSelectedStore: (store) => set({ selectedStore: store, selectedStores: null }),
+            setSelectedStores: (stores) => set({ selectedStores: stores, selectedStore: null }),
             setBottomSheetOpen: (isOpen) => set({ isBottomSheetOpen: isOpen }),
             toggleFavorite: (storeId) => set((state) => ({
                 favorites: state.favorites.includes(storeId)
