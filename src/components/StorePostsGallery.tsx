@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Clock } from 'lucide-react';
+import { Clock, Store } from 'lucide-react';
 
 interface StorePost {
     id: number;
@@ -67,23 +67,24 @@ export default function StorePostsGallery({ storeId, stockCount }: StorePostsGal
 
     if (posts.length === 0) {
         return (
-            <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">아직 사장님이 올린 소식이 없습니다.</p>
+            <div className="text-center py-12 px-6 bg-gray-50 dark:bg-gray-800/30 rounded-[35px] border-2 border-dashed border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">아직 사장님이 올린 소식이 없습니다.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 italic">입고 소식이 들리면 알려드릴게요!</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
-            {/* Section Header with Stock Badge */}
-            <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                <div className="flex-shrink-0 w-1 h-4 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
-                <h3 className="text-base font-bold text-gray-900">사장님의 최근 소식</h3>
+        <div className="space-y-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3">
+                <div className="w-1.5 h-6 bg-gradient-to-b from-[#22C55E] to-blue-500 rounded-full"></div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 italic uppercase tracking-tighter">News Feed</h3>
 
-                {/* Stock Count Badge */}
                 {stockCount !== undefined && stockCount > 0 && (
-                    <div className="ml-auto bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                        재고 {stockCount}개
+                    <div className="ml-auto flex items-center gap-2 bg-green-500/10 dark:bg-green-500/20 px-4 py-1.5 rounded-2xl">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
+                        <span className="text-[10px] font-black text-green-600 dark:text-green-400">현장 재고 {stockCount}개</span>
                     </div>
                 )}
             </div>
@@ -94,52 +95,56 @@ export default function StorePostsGallery({ storeId, stockCount }: StorePostsGal
                 return (
                     <div
                         key={post.id}
-                        className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
+                        className="bg-white dark:bg-gray-800/50 rounded-[35px] overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm transition-all"
                     >
-                        {/* Header with badges */}
-                        <div className="p-4 pb-3 flex items-center gap-2 border-b border-gray-50">
-                            {/* Owner Badge */}
-                            <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
-                                사장님 인증
+                        {/* Header */}
+                        <div className="p-5 pb-0 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-tr from-[#22C55E] to-blue-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-500/20">
+                                    <Store className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-gray-900 dark:text-gray-100">가게 사장님</p>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                        <Clock className="w-3 h-3" />
+                                        <span>{formatTimeAgo(post.created_at)}</span>
+                                    </div>
+                                </div>
                             </div>
-
-                            {/* Timestamp */}
-                            <div className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>{formatTimeAgo(post.created_at)}</span>
-                            </div>
+                            <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-black rounded-xl">
+                                OFFICIAL
+                            </span>
                         </div>
 
                         {/* Content Text */}
                         {post.content && (
-                            <div className="px-4 pt-3 pb-2">
-                                <p className="text-gray-800 text-[15px] leading-relaxed whitespace-pre-wrap">
+                            <div className="p-5 pt-4">
+                                <p className="text-gray-800 dark:text-gray-200 text-base leading-relaxed whitespace-pre-wrap font-medium">
                                     {post.content}
                                 </p>
                             </div>
                         )}
 
-                        {/* Horizontal Photo Scroll Gallery (48x48) */}
+                        {/* Photo Gallery */}
                         {hasPhotos && (
-                            <div className="px-4 pb-4">
-                                <div className="flex gap-2 overflow-x-auto">
+                            <div className="px-5 pb-5">
+                                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
                                     {post.photos.map((photo, idx) => (
-                                        <div
+                                        <button
                                             key={idx}
-                                            className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100"
+                                            className="flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 shadow-sm active:scale-95 transition-all"
                                         >
                                             <img
                                                 src={photo}
-                                                alt={`Photo ${idx + 1}`}
+                                                alt={`Store news ${idx + 1}`}
                                                 className="w-full h-full object-cover"
                                             />
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                                 {post.photos.length > 1 && (
-                                    <p className="text-xs text-gray-400 mt-2 text-center">
-                                        ← 스와이프하여 {post.photos.length}장 모두 보기
+                                    <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-3 font-black uppercase tracking-[0.2em]">
+                                        Swipe to discover
                                     </p>
                                 )}
                             </div>

@@ -6,18 +6,33 @@ import dynamic from 'next/dynamic';
 import { useStore } from '@/store/useStore';
 import StoreList from '@/components/StoreList';
 import StoreBottomSheet from '@/components/StoreBottomSheet';
+import SearchBar from '@/components/SearchBar';
+import LoadingScreen from '@/components/LoadingScreen';
+import ThemeWatcher from '@/components/ThemeWatcher';
 import { Map, List } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const MainMap = dynamic(() => import('@/components/RawNaverMap'), {
     ssr: false,
-    loading: () => <div className="w-full h-screen flex items-center justify-center bg-gray-100">지도를 불러오는 중...</div>
+    loading: () => <div className="w-full h-screen flex items-center justify-center bg-gray-100 font-bold text-gray-400 italic">쿠프 굽는 중...</div>
 });
 
 export default function Home() {
     const { viewMode, setViewMode } = useStore();
+    const [isAppLoading, setIsAppLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsAppLoading(false), 2500);
+        return () => clearTimeout(timer);
+    }, []);
 
     return (
-        <main className="relative w-full h-screen overflow-hidden bg-white">
+        <main className="relative w-full h-screen overflow-hidden bg-white dark:bg-gray-900 transition-colors duration-500">
+            <ThemeWatcher />
+            {isAppLoading && <LoadingScreen />}
+
+            <SearchBar />
+
             {viewMode === 'map' ? (
                 <>
                     <MainMap />

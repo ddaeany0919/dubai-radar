@@ -1,8 +1,11 @@
+
+"use client";
+
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
-import { X, Check, AlertCircle, Heart, Bell } from 'lucide-react';
+import { X, Check, AlertCircle, Heart, Bell, ChevronLeft, Clock, Store } from 'lucide-react';
 import OwnerOnboarding from './OwnerOnboarding';
 import OwnerPostEditor from './OwnerPostEditor';
 import StorePostsGallery from './StorePostsGallery';
@@ -21,21 +24,19 @@ export default function StoreBottomSheet() {
         toggleNotification
     } = useStore();
 
-    const closeBottomSheet = () => {
-        setBottomSheetOpen(false);
-        setSelectedStores(null);
-    };
-
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
-
-    // Owner & Stock State
     const [isOwner, setIsOwner] = useState(false);
     const [stockCount, setStockCount] = useState<number>(0);
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [galleryRefreshKey, setGalleryRefreshKey] = useState(0);
+
+    const closeBottomSheet = () => {
+        setBottomSheetOpen(false);
+        setSelectedStores(null);
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -44,7 +45,6 @@ export default function StoreBottomSheet() {
         });
     }, []);
 
-    // Reset state when modal closes
     useEffect(() => {
         if (!isBottomSheetOpen) {
             setIsOwner(false);
@@ -76,11 +76,12 @@ export default function StoreBottomSheet() {
         if (data) {
             setProduct(data);
             setStockCount(data.stock_count || 0);
-
-            // Auto-login if owner matches
             if (user && data.owner_id === user.id) {
                 setIsOwner(true);
             }
+        } else {
+            setProduct(null);
+            setStockCount(0);
         }
     };
 
@@ -90,15 +91,11 @@ export default function StoreBottomSheet() {
 
         try {
             const finalStatus = (count === 0) ? 'SOLD_OUT' : status;
-
             const updates: any = {
                 status: finalStatus,
                 last_check_time: new Date().toISOString(),
             };
-
-            if (count !== undefined) {
-                updates.stock_count = count;
-            }
+            if (count !== undefined) updates.stock_count = count;
 
             const { data: existing, error: fetchError } = await supabase
                 .from('products')
@@ -106,25 +103,14 @@ export default function StoreBottomSheet() {
                 .eq('store_id', selectedStore.id)
                 .single();
 
-            if (fetchError && fetchError.code !== 'PGRST116') {
-                throw fetchError;
-            }
+            if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
             let error;
-
             if (existing) {
-                const result = await supabase
-                    .from('products')
-                    .update(updates)
-                    .eq('store_id', selectedStore.id);
+                const result = await supabase.from('products').update(updates).eq('store_id', selectedStore.id);
                 error = result.error;
             } else {
-                const result = await supabase
-                    .from('products')
-                    .insert({
-                        store_id: selectedStore.id,
-                        ...updates
-                    });
+                const result = await supabase.from('products').insert({ store_id: selectedStore.id, ...updates });
                 error = result.error;
             }
 
@@ -163,24 +149,36 @@ export default function StoreBottomSheet() {
     if (!mounted || !isBottomSheetOpen || (!selectedStore && !selectedStores)) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+            {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-gray-500/50 backdrop-blur-sm"
+                className="absolute inset-0 bg-gray-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
                 onClick={closeBottomSheet}
             />
 
-            <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+            {/* Modal Container */}
+            <div className="relative bg-white dark:bg-gray-900 w-full max-w-md rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] p-6 sm:p-8 max-h-[85vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-20 duration-500 border border-white/20 dark:border-gray-800 scrollbar-hide">
+
+                {/* Drag Handle (Visual Only) */}
+                <div className="flex justify-center mb-6">
+                    <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                </div>
 
                 {/* Multiple Stores List View */}
                 {selectedStores && !selectedStore && (
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center mb-6">
+                    <div className="space-y-6">
+                        <div className="flex items-start justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">이 구역의 카페 목록</h2>
-                                <p className="text-sm text-gray-500 mt-1">총 {selectedStores.length}개의 가게가 있습니다.</p>
+                                <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <Store className="w-6 h-6 text-[#22C55E]" />
+                                    주변 가게 목록
+                                </h2>
+                                <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1">
+                                    이 구역에 <span className="text-[#22C55E]">{selectedStores.length}개</span>의 가게가 있어요
+                                </p>
                             </div>
-                            <button onClick={closeBottomSheet} className="p-2 hover:bg-gray-100 rounded-full">
-                                <X className="w-6 h-6 text-gray-500" />
+                            <button onClick={closeBottomSheet} className="p-2.5 bg-gray-100 dark:bg-gray-800 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-90">
+                                <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
 
@@ -188,25 +186,27 @@ export default function StoreBottomSheet() {
                             {selectedStores.map((store) => {
                                 const stock = store.products?.[0]?.stock_count || 0;
                                 return (
-                                    <div
+                                    <button
                                         key={store.id}
                                         onClick={() => setSelectedStore(store)}
-                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-green-500 hover:bg-green-50 cursor-pointer transition-all group"
+                                        className="w-full flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/40 rounded-[30px] border border-transparent hover:border-[#22C55E] hover:bg-white dark:hover:bg-gray-800 transition-all group active:scale-[0.98]"
                                     >
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-900 group-hover:text-green-700">{store.name}</h3>
-                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{store.address}</p>
+                                        <div className="flex-1 text-left overflow-hidden">
+                                            <h3 className="font-black text-gray-900 dark:text-gray-100 group-hover:text-[#22C55E] transition-colors truncate">{store.name}</h3>
+                                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">{store.address}</p>
                                         </div>
-                                        <div className="flex items-center gap-2 ml-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-black ${stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        <div className="flex items-center gap-3 ml-4">
+                                            <span className={`px-3 py-1.5 rounded-2xl text-xs font-black shadow-sm ${stock > 0
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                 }`}>
                                                 {stock}개
                                             </span>
-                                            <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-500">
-                                                <Check className="w-4 h-4" />
+                                            <div className="w-8 h-8 rounded-2xl bg-white dark:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-600 flex items-center justify-center text-gray-300 group-hover:text-[#22C55E] group-hover:border-[#22C55E] transition-all">
+                                                <Check className="w-5 h-5" />
                                             </div>
                                         </div>
-                                    </div>
+                                    </button>
                                 );
                             })}
                         </div>
@@ -215,7 +215,7 @@ export default function StoreBottomSheet() {
 
                 {/* Single Store Detail View */}
                 {selectedStore && (
-                    <>
+                    <div className="animate-in fade-in slide-in-from-right-10 duration-500">
                         {showOnboarding ? (
                             <OwnerOnboarding
                                 storeId={selectedStore.id}
@@ -223,32 +223,48 @@ export default function StoreBottomSheet() {
                                 onSuccess={handleOnboardingSuccess}
                             />
                         ) : (
-                            <>
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
+                            <div className="space-y-8">
+                                {/* Header */}
+                                <div className="space-y-4">
+                                    <div className="flex items-start justify-between">
+                                        <div className="space-y-2">
                                             {selectedStores && (
                                                 <button
                                                     onClick={() => setSelectedStore(null)}
-                                                    className="text-xs text-green-600 font-bold hover:underline mb-1"
+                                                    className="flex items-center gap-1 text-xs font-black text-[#22C55E] hover:underline"
                                                 >
-                                                    ← 목록으로
+                                                    <ChevronLeft className="w-4 h-4" />
+                                                    목록으로 돌아가기
                                                 </button>
                                             )}
+                                            <h2 className="text-3xl font-black text-gray-900 dark:text-gray-100 leading-tight">
+                                                {selectedStore.name}
+                                            </h2>
+                                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
+                                                {selectedStore.address || '주소 정보 없음'}
+                                            </p>
                                         </div>
-                                        <h2 className="text-xl font-bold text-gray-900">{selectedStore.name}</h2>
-                                        <p className="text-sm text-gray-500 mt-1">{selectedStore.address || '주소 정보 없음'}</p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={closeBottomSheet}
+                                                className="p-3 bg-gray-100 dark:bg-gray-800 rounded-3xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-90 shadow-sm"
+                                            >
+                                                <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Actions */}
+                                    <div className="flex items-center gap-3">
                                         <a
                                             href={`https://map.naver.com/p/search/${encodeURIComponent(selectedStore.name + ' ' + (selectedStore.address || ''))}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-full hover:bg-green-600 transition-colors"
+                                            className="flex-1 h-12 flex items-center justify-center gap-2 bg-[#22C55E] hover:bg-[#16A34A] text-white font-black rounded-2xl shadow-lg shadow-green-500/20 transition-all active:scale-95"
                                         >
-                                            <span>N</span>
-                                            <span>네이버 플레이스</span>
+                                            <span className="text-lg">N</span>
+                                            <span>길찾기</span>
                                         </a>
-                                    </div>
-                                    <div className="flex gap-2">
                                         <button
                                             onClick={async () => {
                                                 if (Notification.permission !== 'granted') {
@@ -257,95 +273,118 @@ export default function StoreBottomSheet() {
                                                 }
                                                 toggleNotification(selectedStore.id);
                                             }}
-                                            className="p-2 hover:bg-gray-100 rounded-full"
+                                            className={`w-12 h-12 flex items-center justify-center rounded-2xl border-2 transition-all active:scale-90 ${notifications.includes(selectedStore.id)
+                                                ? 'bg-yellow-400 border-yellow-400 text-white shadow-lg shadow-yellow-500/30'
+                                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
+                                                }`}
                                         >
-                                            <Bell
-                                                className={`w-6 h-6 transition-colors ${notifications.includes(selectedStore.id) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'
-                                                    }`}
-                                            />
+                                            <Bell className={`w-6 h-6 ${notifications.includes(selectedStore.id) ? 'fill-white' : ''}`} />
                                         </button>
                                         <button
                                             onClick={() => toggleFavorite(selectedStore.id)}
-                                            className="p-2 hover:bg-gray-100 rounded-full"
+                                            className={`w-12 h-12 flex items-center justify-center rounded-2xl border-2 transition-all active:scale-90 ${favorites.includes(selectedStore.id)
+                                                ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/30'
+                                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
+                                                }`}
                                         >
-                                            <Heart
-                                                className={`w-6 h-6 transition-colors ${favorites.includes(selectedStore.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'
-                                                    }`}
-                                            />
-                                        </button>
-                                        <button onClick={closeBottomSheet} className="p-2 hover:bg-gray-100 rounded-full">
-                                            <X className="w-6 h-6 text-gray-500" />
+                                            <Heart className={`w-6 h-6 ${favorites.includes(selectedStore.id) ? 'fill-white' : ''}`} />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="mb-6">
-                                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">상품 상태</span>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${product?.status === 'AVAILABLE' ? 'bg-green-100 text-green-700' :
-                                                product?.status === 'SOLD_OUT' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                                {/* Stock Card */}
+                                <div className="bg-gray-900 dark:bg-white p-8 rounded-[40px] text-white dark:text-gray-900 shadow-2xl relative overflow-hidden group">
+                                    {/* Decoration Circles */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#22C55E]/20 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-[#22C55E]/30 transition-all duration-700" />
+                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full -ml-12 -mb-12 blur-xl" />
+
+                                    <div className="relative space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Realtime Stock</span>
+                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-wider shadow-sm ${product?.status === 'AVAILABLE'
+                                                ? 'bg-[#22C55E] text-white'
+                                                : 'bg-red-500 text-white'
                                                 }`}>
-                                                {product?.status === 'AVAILABLE' ? '재고 있음' :
-                                                    product?.status === 'SOLD_OUT' ? '품절' : '정보 없음'}
+                                                {product?.status === 'AVAILABLE' ? '🍪 IN STOCK' : '🚫 SOLD OUT'}
                                             </span>
                                         </div>
 
-                                        <div className="flex items-end justify-between">
-                                            <div>
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className={`text-4xl font-black ${(product?.stock_count || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-1">
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="text-6xl font-black tabular-nums tracking-tighter">
                                                         {product?.stock_count || 0}
                                                     </span>
-                                                    <span className={`text-lg font-bold ${(product?.stock_count || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                        개 남음
-                                                    </span>
+                                                    <span className="text-2xl font-bold opacity-60 italic">개</span>
                                                 </div>
                                                 {product?.price > 0 && (
-                                                    <p className="text-lg font-bold text-gray-900 mt-1">
+                                                    <p className="text-xl font-black text-[#22C55E]">
                                                         {product.price.toLocaleString()}원
                                                     </p>
                                                 )}
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] text-gray-400 uppercase tracking-tighter">마지막 업데이트</p>
-                                                <p className="text-xs font-medium text-gray-500">
-                                                    {product?.last_check_time ? new Date(product.last_check_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                            <div className="text-right flex flex-col items-end">
+                                                <div className="w-10 h-10 bg-white/10 dark:bg-black/5 rounded-2xl flex items-center justify-center mb-2">
+                                                    <Clock className="w-5 h-5 opacity-60" />
+                                                </div>
+                                                <p className="text-[9px] font-black text-gray-500 uppercase">Updated</p>
+                                                <p className="text-xs font-bold font-mono">
+                                                    {product?.last_check_time
+                                                        ? new Date(product.last_check_time).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                        : '--:--:--'}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Owner Controls */}
                                 {isOwner && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-gray-700">재고 수량:</span>
-                                            <input
-                                                type="number"
-                                                value={stockCount}
-                                                onChange={(e) => setStockCount(Number(e.target.value))}
-                                                className="px-3 py-2 border rounded-lg w-20 font-bold"
-                                            />
-                                            <span className="text-sm text-gray-600">개</span>
+                                    <div className="space-y-6 bg-gray-50 p-7 rounded-[35px] border border-gray-100 animate-in fade-in duration-500">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-black text-gray-900">재고 수동 관리</h3>
+                                            <div className="flex items-center gap-3 bg-white p-1.5 px-4 rounded-2xl border border-gray-200 shadow-sm focus-within:border-[#22C55E] focus-within:ring-4 focus-within:ring-[#22C55E]/5 transition-all">
+                                                <input
+                                                    type="number"
+                                                    value={stockCount}
+                                                    onChange={(e) => setStockCount(Number(e.target.value))}
+                                                    style={{ appearance: 'textfield', MozAppearance: 'textfield' }}
+                                                    className="w-14 bg-transparent text-right font-black text-xl focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                                <span className="text-sm font-bold text-gray-400">개</span>
+                                            </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-2 gap-4">
                                             <button
                                                 onClick={() => handleUpdateStock('AVAILABLE', stockCount)}
                                                 disabled={loading}
-                                                className="flex flex-col items-center justify-center p-4 bg-green-50 border-2 border-green-500 rounded-xl hover:bg-green-100 active:scale-95 transition-all"
+                                                className={`
+                                                        flex flex-col items-center justify-center p-6 rounded-[30px] shadow-sm transition-all duration-300 group active:scale-95 disabled:opacity-50 border-2
+                                                        ${product?.status === 'AVAILABLE'
+                                                        ? 'bg-green-50 border-[#22C55E] shadow-green-100'
+                                                        : 'bg-white border-gray-100 hover:border-[#22C55E]'}
+                                                    `}
                                             >
-                                                <Check className="w-8 h-8 text-green-600 mb-2" />
-                                                <span className="font-bold text-green-700">입고 처리</span>
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all ${product?.status === 'AVAILABLE' ? 'bg-[#22C55E] text-white' : 'bg-green-50 text-[#22C55E]'}`}>
+                                                    <Check className="w-6 h-6" />
+                                                </div>
+                                                <span className={`font-black text-sm transition-colors ${product?.status === 'AVAILABLE' ? 'text-green-700' : 'text-gray-500'}`}>입고 완료</span>
                                             </button>
                                             <button
                                                 onClick={() => handleUpdateStock('SOLD_OUT', 0)}
                                                 disabled={loading}
-                                                className="flex flex-col items-center justify-center p-4 bg-red-50 border-2 border-red-500 rounded-xl hover:bg-red-100 active:scale-95 transition-all"
+                                                className={`
+                                                        flex flex-col items-center justify-center p-6 rounded-[30px] shadow-sm transition-all duration-300 group active:scale-95 disabled:opacity-50 border-2
+                                                        ${product?.status === 'SOLD_OUT'
+                                                        ? 'bg-red-50 border-red-500 shadow-red-100'
+                                                        : 'bg-white border-gray-100 hover:border-red-500'}
+                                                    `}
                                             >
-                                                <AlertCircle className="w-8 h-8 text-red-600 mb-2" />
-                                                <span className="font-bold text-red-700">품절 처리</span>
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all ${product?.status === 'SOLD_OUT' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-500'}`}>
+                                                    <AlertCircle className="w-6 h-6" />
+                                                </div>
+                                                <span className={`font-black text-sm transition-colors ${product?.status === 'SOLD_OUT' ? 'text-red-700' : 'text-gray-500'}`}>품절 안내</span>
                                             </button>
                                         </div>
 
@@ -359,7 +398,8 @@ export default function StoreBottomSheet() {
                                     </div>
                                 )}
 
-                                <div className="mt-6">
+                                {/* Owner Post / Gallery Section */}
+                                <div className="space-y-4">
                                     <StorePostsGallery
                                         key={galleryRefreshKey}
                                         storeId={selectedStore.id}
@@ -367,28 +407,29 @@ export default function StoreBottomSheet() {
                                     />
                                 </div>
 
+                                {/* Footer Tools */}
                                 {!isOwner && (
-                                    <div className="mt-6 pt-4 border-t border-gray-200 space-y-2">
+                                    <div className="pt-4 flex flex-col gap-3">
                                         <button
                                             onClick={handleOwnerClick}
-                                            className="w-full py-3 text-sm text-gray-500 hover:text-gray-700 font-medium"
+                                            className="w-full py-5 rounded-[25px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-black text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-[0.98]"
                                         >
-                                            사장님이신가요? 재고 관리하기
+                                            가게 사장님이신가요? 인증하기
                                         </button>
                                         <button
                                             onClick={() => {
                                                 setIsOwner(true);
-                                                alert('🕵️ 개발자 모드: 강제로 사장님 권한을 획득했습니다.');
+                                                alert('🕵️ 개발자 모드: 사장님 권한을 강제로 획득했습니다.');
                                             }}
-                                            className="text-xs text-gray-300 hover:text-gray-400 w-full"
+                                            className="text-[10px] uppercase tracking-widest font-black text-gray-300 dark:text-gray-600 hover:text-gray-400 w-full py-2 transition-colors uppercase"
                                         >
-                                            (Dev Mode)
+                                            [ Entering Developer Mode ]
                                         </button>
                                     </div>
                                 )}
-                            </>
+                            </div>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>,

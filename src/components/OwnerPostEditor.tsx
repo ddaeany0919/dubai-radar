@@ -208,7 +208,7 @@ export default function OwnerPostEditor({ storeId, onPostCreated }: OwnerPostEdi
             <button
                 onClick={handleSubmit}
                 disabled={uploading || (!content.trim() && photos.length === 0)}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg border-2 border-transparent hover:border-blue-300 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
             >
                 {uploading ? '업로드 중...' : '포스트 등록하기 ✨'}
             </button>
